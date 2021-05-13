@@ -1,9 +1,12 @@
 ﻿using System;
+using System.Diagnostics;
 using System.Linq;
 using System.Text.RegularExpressions;
 using System.Threading;
+using log4net;
 using OpenQA.Selenium;
 using OpenQA.Selenium.Chrome;
+using OpenQA.Selenium.Support.Extensions;
 
 namespace AmazonFarm
 {
@@ -12,6 +15,7 @@ namespace AmazonFarm
         private readonly Config config;
         private readonly IWebDriver webDriver;
         private readonly AsinGroup asinGroup;
+        private readonly ILog logger = LogManager.GetLogger(typeof(Selenium));
 
         public Selenium(Config config, AsinGroup asinGroup) {
             var options = new ChromeOptions {
@@ -27,7 +31,15 @@ namespace AmazonFarm
         }
 
         public void Start(CancellationToken token) {
-            Login();
+            for (int i = 0; i < 3; i++) {
+                try {
+                    if (Login()) {
+                        break;
+                    }
+                } catch (Exception ex) {
+                    Console.WriteLine(ex);
+                }
+            }
 
             while (!token.IsCancellationRequested) {
                 foreach (var asin in asinGroup.Asins) {
@@ -46,21 +58,12 @@ namespace AmazonFarm
             }
         }
 
-        public void ContinueCheckout() {
-            // Switch to checkout iFrame
-            var iFrame = webDriver.FindElement(By.Id("turbo-checkout-iframe"));
-            webDriver.SwitchTo().Frame(iFrame);
-            webDriver.FindElement(By.Id("turbo-checkout-place-order-button")).Click();
-            webDriver.SwitchTo().ParentFrame();
-
-            Green("Purchased item! Congratz! Goodbye.");
-        }
 
         public void Stop() {
             webDriver.Quit();
         }
 
-        public void Login() {
+        public bool Login() {
             webDriver.Url = $"https://{config.Domain}/";
 
             webDriver.FindElement(By.XPath("//*[@id=\"ge-hello\"]/div[2]/span/a")).Click();
@@ -68,6 +71,7 @@ namespace AmazonFarm
             webDriver.FindElement(By.Id("continue")).Click();
             webDriver.FindElement(By.Id("ap_password")).SendKeys(config.Password);
             webDriver.FindElement(By.Id("signInSubmit")).Click();
+            return true;
         }
 
         public bool CheckForItems(string asin, AsinGroup asinGroup) {
@@ -118,6 +122,40 @@ namespace AmazonFarm
 
             Red($"Price invalid: ${price}");
             return false;
+        }
+
+        public void ContinueCheckout() {
+            try {
+                var element = webDriver.FindElements(By.CssSelector("#sc-buy-box-ptc-button, #submitOrderButtonId, #turbo-checkout-iframe")).FirstOrDefault();
+
+                if (element == null) {
+                    Red("WTF");
+                    logger.Error(webDriver.PageSource);
+                    webDriver.TakeScreenshot().SaveAsFile(DateTime.Now.ToFileTime().ToString() + ".jpg");
+                    Debugger.Break();
+                }
+
+                var id = element.GetAttribute("id");
+
+                if (id == "turbo-checkout-iframe") {
+                    ShortCheckout(element);
+                    return;
+                }
+
+                element.Click();
+            } catch (Exception) {
+                logger.Error(webDriver.PageSource);
+                webDriver.TakeScreenshot().SaveAsFile(DateTime.Now.ToFileTime().ToString() + ".jpg");
+            }
+        }
+
+        public void ShortCheckout(IWebElement iFrame) {
+            // Switch to checkout iFrame
+            webDriver.SwitchTo().Frame(iFrame);
+            webDriver.FindElement(By.Id("turbo-checkout-place-order-button")).Click();
+            webDriver.SwitchTo().ParentFrame();
+
+            Green("Purchased item! Congratz! Goodbye.");
         }
     }
 }

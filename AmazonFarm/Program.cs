@@ -18,25 +18,26 @@ namespace AmazonFarm
             var cancellationToken = new CancellationTokenSource();
             var tasks = new List<Task>();
 
-            Data.asins.SelectMany(asin => asin.Asins.Select(a =>
-            new AsinGroup {
-                Asins = new List<string> { a },
-                MinPrice = asin.MinPrice,
-                MaxPrice = asin.MaxPrice
-            })).ToList().ForEach(asin => {
-                tasks.Add(Task.Run(() => {
-                    var selenium = new Selenium(config, asin);
+            config.AsinGroups.SelectMany(asin => asin.Asins.Select(
+                a => new AsinGroup {
+                    Asins = new List<string> { a },
+                    MinPrice = asin.MinPrice,
+                    MaxPrice = asin.MaxPrice
+                })).ToList().ForEach(
+                    asin => {
+                        tasks.Add(Task.Run(() => {
+                            var selenium = new Selenium(config, asin);
 
 
-                    selenium.Start(cancellationToken.Token);
+                            selenium.Start(cancellationToken.Token);
 
-                    if (!cancellationToken.IsCancellationRequested) {
-                        cancellationToken.Cancel();
-                    }
+                            if (!cancellationToken.IsCancellationRequested) {
+                                cancellationToken.Cancel();
+                            }
 
-                    selenium.Stop();
-                }));
-            });
+                            selenium.Stop();
+                        }));
+                    });
 
             Console.ReadLine();
 

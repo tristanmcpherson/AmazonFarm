@@ -1,4 +1,26 @@
 {
-    "email": "test@gmail.com",
-    "password": "pass"
+  "email": "test@gmail.com",
+  "password": "pass",
+  "asinGroups": [
+    { // 3060
+      "asins": [ "B08WM28PVH" ],
+      "minPrice": 350.0,
+      "maxPrice": 450.0
+    },
+    { // 3070
+      "asins": [ "B08LF1CWT2", "B08L8KC1J7", "B08L8L71SM" ],
+      "minPrice": 600.0,
+      "maxPrice": 850.0
+    },
+    { // 3080
+      "asins": [ "B08HH5WF97", "B08HR5SXPS", "B08HR55YB5" ],
+      "minPrice": 600.0,
+      "maxPrice": 1000.0
+    },
+    { // 6900XT
+      "asins": [ "B08QQFW9YS", "B08PHWJC8X", "B08PDQJVD9" ],
+      "minPrice": 0.0,
+      "maxPrice": 0.0
+    }
+  ]
 }
